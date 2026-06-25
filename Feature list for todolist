@@ -1,0 +1,153 @@
+Feature list for todolist
+
+Core
+
+Weekly System
+
+7 fixed daily task lists (Monday–Sunday)
+Tasks automatically belong to a specific weekday
+System always regenerates the correct day view
+No manual resetting required
+
+Daily Update Logic
+
+Detect current date
+Compare with last saved active day
+Trigger rollover when day changes
+Move unfinished tasks to Extra list
+
+Custom Day Reset Time
+
+User can choose what time the “day” changes
+Example: 04:00 instead of 00:00
+System checks current time
+If current time passes chosen reset time:
+→ Update active day
+→ Run rollover logic
+Reset time stored in settings
+
+Task Management
+
+Add task
+Remove task
+Edit task
+Mark task complete
+Mark task incomplete
+
+Extra (Overflow) List
+
+Automatically receives unfinished daily tasks
+Separate from weekly structure
+Can manually add/remove tasks
+Can mark as completed
+
+Separate Custom Lists
+
+User-created lists independent of daily system
+Add list
+Delete list
+Manage tasks inside them
+
+Habit System
+
+Mark a task as a habit
+Track habit completion history
+Calculate streaks
+Calculate weekly consistency
+Show habit-specific stats
+
+Reward System
+
+Define rewards
+Reward triggers based on:
+Completing full day
+Maintaining habit for X days
+Completing specific extra list
+Reward eligibility rules
+Reward unlocking logic
+
+Consistency Tracking
+
+Daily completion percentage
+Weekly completion percentage
+Habit streak length
+Overall performance stats
+
+Time Handling
+
+Store reset time setting
+Compare current time to reset time
+Trigger day transition logic
+
+DATA LAYER (Storage)
+
+This layer only handles saving and loading.
+
+It does NOT decide rules.
+
+Features:
+
+Data Storage
+
+Store tasks
+Store daily structure
+Store extra list
+Store custom lists
+Store habits
+Store rewards
+Store settings (including reset time)
+
+Load Data
+
+Load everything at app start
+
+Save Data
+
+After any change
+
+Export Data
+
+Create backup file
+Save to user-chosen location
+
+Import Data
+
+Restore from backup file
+
+Recommended storage option:
+
+SQLite database (clean and structured)
+OR
+Structured JSON file (simpler but less powerful)
+
+INTERFACE LAYER (UI)
+
+This layer is just how the user interacts.
+
+You can build multiple versions later.
+
+CLI Interface
+
+Show today’s tasks
+Add task
+Complete task
+View habits
+View rewards
+Change reset time
+Export data
+
+GUI Interface (Later)
+
+Buttons for tasks
+Visual daily view
+Habit screen
+Reward screen
+Settings screen
+Sound when completing tasks
+Visual animations
+
+Web Interface (Future)
+
+Browser-based version
+Connects to same core logic
+Same data structure
