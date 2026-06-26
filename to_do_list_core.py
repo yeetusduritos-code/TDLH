@@ -262,25 +262,59 @@ def mark_incomplete_task(cursor, conn):
         else:
             print("Operation cancelled")
 
-def show_list(cursor, conn):
+def show_list(cursor, conn, target_date=None):
+    
     list_choice = input("What list would you like to view? (day(d), week(w), month(m), year(y), or custom(c)): ")
 
     if list_choice.lower() == "d":
-
         print("--- Todays list ---")
+        print("Todays date and time", current_time)
+
+        # 1. Handle the default: Use today's date if the user didn't type one in
+        if target_date is None:
+            target_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S") # e.g., "2026-06-26"
+
+        print(f"\n--- Fetching tasks for date: {target_date} ---")
+
+        # 2. THE SQL QUERY
+        # This selects tasks where the target_date matches exactly, 
+        # OR daily tasks that started on or before the selected date (ignoring finished ones)
+        cursor.execute("""
+            SELECT id, name, category, recurrence_type 
+            FROM tasks 
+            WHERE (target_date = ? AND recurrence_type = 'once')
+            OR (recurrence_type = 'daily' AND target_date <= ? AND (end_date IS NULL OR end_date >= ?))
+        """, (target_date, target_date, target_date))
+        
+        todays_tasks = cursor.fetchall()
+
+        # 3. Display the raw results
+        if not todays_tasks:
+            print("No tasks found scheduled for this day.")
+        else:
+            for task in todays_tasks:
+                # task is a tuple: (id, name, category, recurrence_type)
+                print(f"ID: {task[0]} | Name: {task[1]} [{task[3]}]")
 
     elif list_choice.lower() == "w":
+        print("--- This weeks list ---")
+        print("Todays date and time", current_time)
 
     elif list_choice.lower() == "m":
+        print("--- This months list ---")
+        print("Todays date and time", current_time)
 
     elif list_choice.lower() == "y":
+        print("--- This years list ---")
+        print("Todays date and time", current_time)
 
     elif list_choice.lower() == "c":
+        print("--- Custom lists ---")
+        print("Todays date and time", current_time)
 
 
 def custom_list(cursor, conn):
     pass
-
 
 
 #AI generated code
