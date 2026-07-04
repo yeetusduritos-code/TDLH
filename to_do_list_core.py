@@ -11,7 +11,7 @@ def add_task(cursor, conn):
     print("\n--- Display Layout Position ---")
     print("1. Weekday List\n2. Monthly List\n3. Yearly List\n4. Custom Board")
     frame_choice = input("Choose (1-4): ")
-    time_frame = ['weekday', 'month', 'year', 'custom_frame'][int(frame_choice) - 1]
+    time_frame = ['day', 'week', 'month', 'year', 'custom'][int(frame_choice) - 1]
 
     if time_frame != "custom":
         target_date = input("Target date for this item (YYYY-MM-DD): ")
@@ -132,9 +132,9 @@ def edit_task(cursor, conn):
 
         elif edit_select == 3:
             print("\nSet new \n--- Display Layout Position ---")
-            print("1. Weekday List\n2. Monthly List\n3. Yearly List\n4. Custom Board")
-            frame_choice = input("Choose (1-4): ")
-            time_frame = ['weekday', 'month', 'year', 'custom'][int(frame_choice) - 1]
+            print("1. Weekday List\n2. Weekly List\n3. Monthly List\n4. Yearly List\n5. Custom Board")
+            frame_choice = input("Choose [1-5]: ")
+            time_frame = ['day','week', 'month', 'year', 'custom'][int(frame_choice) - 1]
 
             if time_frame != "custom":
                 target_date = input("Target date for this item (YYYY-MM-DD): ")
@@ -282,7 +282,7 @@ def show_list(cursor, conn, target_date=None):
         cursor.execute("""
             SELECT id, name, category, recurrence_type 
             FROM tasks 
-            WHERE (target_date = ? AND recurrence_type = 'once')
+            WHERE (target_date = ? AND time_frame = 'day' AND recurrence_type = 'once')
             OR (recurrence_type = 'daily' AND target_date <= ? AND (end_date IS NULL OR end_date >= ?))
         """, (target_date, target_date, target_date))
         
@@ -297,16 +297,107 @@ def show_list(cursor, conn, target_date=None):
                 print(f"ID: {task[0]} | Name: {task[1]} [{task[3]}]")
 
     elif list_choice.lower() == "w":
+
         print("--- This weeks list ---")
         print("Todays date and time", current_time)
+
+        # 1. Handle the default: Use today's date if the user didn't type one in
+        if target_date is None:
+            target_date = datetime.now().strftime("%Y-%m-%d") # e.g., "2026-06-26"
+        else:
+            # If a full timestamp was passed, extract just the date part
+            target_date = target_date.split()[0]
+
+        # Convert the target date string into a real object to calculate week boundaries
+        target_dt = datetime.strptime(target_date, "%Y-%m-%d")
+        
+        # target_dt.weekday() returns 0 for Monday, 1 for Tuesday... 6 for Sunday
+        # This math finds the Monday and Sunday of that target date's week
+        start_of_week = (target_dt - timedelta(days=target_dt.weekday())).strftime("%Y-%m-%d")
+        end_of_week = (target_dt + timedelta(days=6 - target_dt.weekday())).strftime("%Y-%m-%d")
+
+        print(f"Week Window: {start_of_week} to {end_of_week}")
+        print(f"\n--- Fetching tasks for this week: {target_date} ---")
+
+        # 2. THE SQL QUERY
+        # This selects tasks where the target_date matches exactly, 
+        # OR daily tasks that started on or before the selected date (ignoring finished ones)
+        cursor.execute("""
+            SELECT id, name, category, recurrence_type 
+            FROM tasks 
+            WHERE (target_date >= ? AND target_date <= ? AND time_frame = 'week' AND recurrence_type = 'once')
+            OR (recurrence_type = 'weekly' AND target_date <= ? AND (end_date IS NULL OR end_date >= ?) AND time_frame = 'week')
+        """, (start_of_week, end_of_week, end_of_week, start_of_week))
+
+        weekly_tasks = cursor.fetchall()
+
+        # 3. Display the raw results
+        if not weekly_tasks:
+            print("No tasks found scheduled for this week.")
+        else:
+            for task in weekly_tasks:
+                # task is a tuple: (id, name, category, recurrence_type)
+                print(f"ID: {task[0]} | Name: {task[1]} [{task[3]}]")
 
     elif list_choice.lower() == "m":
         print("--- This months list ---")
         print("Todays date and time", current_time)
 
+        # 1. Handle the default: Use today's date if the user didn't type one in
+        if target_date is None:
+            target_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S") # e.g., "2026-06-26"
+
+        print(f"\n--- Fetching tasks for this month: {target_date} ---")
+
+        # 2. THE SQL QUERY
+        # This selects tasks where the target_date matches exactly, 
+        # OR daily tasks that started on or before the selected date (ignoring finished ones)
+        cursor.execute("""
+            SELECT id, name, category, recurrence_type 
+            FROM tasks 
+            WHERE (target_date = ? AND time_frame = 'month' AND recurrence_type = 'once')
+            OR (recurrence_type = 'monthly' AND target_date <= ? AND (end_date IS NULL OR end_date >= ?))
+        """, (target_date, target_date, target_date))
+
+        monthly_tasks = cursor.fetchall()
+
+        # 3. Display the raw results
+        if not monthly_tasks:
+            print("No tasks found scheduled for this month.")
+        else:
+            for task in monthly_tasks:
+                # task is a tuple: (id, name, category, recurrence_type)
+                print(f"ID: {task[0]} | Name: {task[1]} [{task[3]}]")
+
     elif list_choice.lower() == "y":
         print("--- This years list ---")
         print("Todays date and time", current_time)
+
+        # 1. Handle the default: Use today's date if the user didn't type one in
+        if target_date is None:
+            target_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S") # e.g., "2026-06-26"
+
+        print(f"\n--- Fetching tasks for this year: {target_date} ---")
+
+        # 2. THE SQL QUERY
+        # This selects tasks where the target_date matches exactly, 
+        # OR daily tasks that started on or before the selected date (ignoring finished ones)
+        cursor.execute("""
+            SELECT id, name, category, recurrence_type 
+            FROM tasks 
+            WHERE (target_date = ? AND time_frame = 'year' AND recurrence_type = 'once')
+            OR (recurrence_type = 'yearly' AND target_date <= ? AND (end_date IS NULL OR end_date >= ?))
+        """, (target_date, target_date, target_date))
+
+        yearly_tasks = cursor.fetchall()
+
+        # 3. Display the raw results
+        if not yearly_tasks:
+            print("No tasks found scheduled for this month.")
+        else:
+            for task in yearly_tasks:
+                # task is a tuple: (id, name, category, recurrence_type)
+                print(f"ID: {task[0]} | Name: {task[1]} [{task[3]}]")
 
     elif list_choice.lower() == "c":
         print("--- Custom lists ---")
