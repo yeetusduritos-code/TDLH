@@ -345,7 +345,13 @@ def show_list(cursor, conn, target_date=None):
 
         # 1. Handle the default: Use today's date if the user didn't type one in
         if target_date is None:
-            target_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S") # e.g., "2026-06-26"
+            target_date = datetime.now().strftime("%Y-%m-%d") # e.g., "2026-06-26"
+        else:
+            # If a full timestamp was passed, extract just the date part
+            target_date = target_date.split()[0]
+        
+        # 2. Extract just the Year and Month (The first 7 characters: "YYYY-MM")
+        current_month_str = target_date[:7] # e.g., "2026-07"
 
         print(f"\n--- Fetching tasks for this month: {target_date} ---")
 
@@ -355,19 +361,20 @@ def show_list(cursor, conn, target_date=None):
         cursor.execute("""
             SELECT id, name, category, recurrence_type 
             FROM tasks 
-            WHERE (target_date = ? AND time_frame = 'month' AND recurrence_type = 'once')
-            OR (recurrence_type = 'monthly' AND target_date <= ? AND (end_date IS NULL OR end_date >= ?))
-        """, (target_date, target_date, target_date))
+            WHERE (target_date LIKE ? AND time_frame = 'month' AND recurrence_type = 'once')
+            OR (target_date <= ? AND end_date >= ? AND time_frame = 'month' AND recurrence_type = 'monthly')
+        """, (current_month_str, current_month_str, current_month_str))
 
         monthly_tasks = cursor.fetchall()
 
         # 3. Display the raw results
         if not monthly_tasks:
-            print("No tasks found scheduled for this month.")
+            print("No tasks found scheduled for this week.")
         else:
             for task in monthly_tasks:
                 # task is a tuple: (id, name, category, recurrence_type)
                 print(f"ID: {task[0]} | Name: {task[1]} [{task[3]}]")
+    
 
     elif list_choice.lower() == "y":
         print("--- This years list ---")
