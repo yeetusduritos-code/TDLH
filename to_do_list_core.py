@@ -1,22 +1,23 @@
 # imports programs for use
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 
 def add_task(cursor, conn):
 
-    task = input("What is your task/habit ")
-
-    category = get_or_create_category(cursor)
-
     print("\n--- Display Layout Position ---")
-    print("1. Weekday List\n2. Monthly List\n3. Yearly List\n4. Custom Board")
+    print("1. Weekday List\n2. Monthly List\n3. Yearly List\n4. Custom")
     frame_choice = input("Choose (1-4): ")
     time_frame = ['day', 'week', 'month', 'year', 'custom'][int(frame_choice) - 1]
 
     if time_frame != "custom":
         target_date = input("Target date for this item (YYYY-MM-DD): ")
     else:
-        target_date = None
+        add_custom_task
+        return
+    
+    task = input("What is your task/habit ")
+
+    category = get_or_create_category(cursor)
     
     print("\n--- Recurrence Type ---")
     print("1. Once\n2. Daily\n3. Weekly List\n4. Monthly List\n5. Custom Interval")
@@ -28,15 +29,36 @@ def add_task(cursor, conn):
         interval_days = int(input("Repeat every how many days? "))
 
     end_date = input("End date for recurrence (YYYY-MM-DD) [Press Enter for never]: ") or None
-
+    
+    custom_list = None
+    
     cursor.execute(
     "INSERT INTO tasks (name, category, time_frame, target_date, recurrence_type, interval_days, end_date) VALUES (?,?,?,?,?,?,?)",
-    (task, category, time_frame, target_date, recurrence_type, interval_days, end_date)
+    (task, category, time_frame, target_date, recurrence_type, interval_days, end_date, custom_list)
     )
     conn.commit()
 
     print("Task created with ID:", cursor.lastrowid)
 
+def add_custom_task(cursor, conn):
+
+    time_frame = "custom"
+    category = get_or_create_category(cursor)
+    target_date = None
+    recurrence_type = None
+    interval_days = 0
+    end_date = None
+
+    task = input("What is your task/habit ")
+    custom_list = input("What custom list is this task/habit part off ")
+
+    cursor.execute(
+    "INSERT INTO tasks (name, category, time_frame, target_date, recurrence_type, interval_days, end_date) VALUES (?,?,?,?,?,?,?)",
+    (task, category, time_frame, target_date, recurrence_type, interval_days, end_date, custom_list)
+    )
+    conn.commit()
+
+    print("Task created with ID:", cursor.lastrowid)
 
 def inspect_task(cursor, conn):
     task_id = input("ID of task to inspect: ")
@@ -175,7 +197,7 @@ def edit_task(cursor, conn):
             edit_value = input("End date for recurrence (YYYY-MM-DD) [Press Enter for never]: ") or None
         
         # 4. MASTER ENGINE LOGIC (Runs for options 1, 2, 4, 6, and 7)
-        if edit_select in [1, 2, 4, 6, 7]: # safely allows None strings for skip options
+        if edit_select in [1, 2, 4, 6, 7,]: # safely allows None strings for skip options
             cursor.execute(
                 f"UPDATE tasks SET {edit_choice} = ? WHERE id = ?",
                 (edit_value, int(task))
@@ -220,51 +242,51 @@ def mark_complete_task(cursor, conn):
     conn.commit()
 
 def mark_incomplete_task(cursor, conn):
-    def mark_incomplete_task(cursor, conn):
 
-        user_input = input("Id of task and date to remove (ID YYYY-MM-DD): ").strip()
+    user_input = input("Id of task and date to remove (ID YYYY-MM-DD): ").strip()
+    
+    #Split the string by its space character into a list
+    parts = user_input.split()
+    
+    if len(parts) < 2 or len(parts) > 2:
+        print("Error: You must type BOTH the ID and the Date separated by a space.")
+        return
         
-        #Split the string by its space character into a list
-        parts = user_input.split()
-        
-        if len(parts) < 2 or len(parts) > 2:
-            print("Error: You must type BOTH the ID and the Date separated by a space.")
-            return
-            
-        task_id = int(parts[0])   # The first part is your ID number
-        target_date = parts[1]    # The second part is your YYYY-MM-DD date string
+    task_id = int(parts[0])   # The first part is your ID number
+    target_date = parts[1]    # The second part is your YYYY-MM-DD date string
 
-        # LIKE with a '%' wildcard because timestamps have hours/minutes/seconds attached
+    # LIKE with a '%' wildcard because timestamps have hours/minutes/seconds attached
+    cursor.execute(
+        "SELECT * FROM task_completions WHERE task_id = ? AND completed_date LIKE ?",
+        (task_id, f"{target_date}%")
+    )
+
+    one_log = cursor.fetchone()
+    if not one_log:
+        print(f"No completion log found for Task ID {task_id} on {target_date}.")
+        return
+
+    print("\nThis is the completion log you selected:")
+    print(f"Log ID: {one_log[0]} | Task ID: {one_log[1]} | Timestamp: {one_log[2]}")
+
+    yn = input("Are you sure you want to delete this completion record? y/N ")
+
+    if yn.lower() == "y":
+        # 4. Use DELETE to wipe out that exact specific log row
         cursor.execute(
-            "SELECT * FROM task_completions WHERE task_id = ? AND completed_date LIKE ?",
-            (task_id, f"{target_date}%")
+            "DELETE FROM task_completions WHERE id = ?",
+            (one_log[0],) # Targets the unique ID of the log row itself
         )
+        print(f"Completion record for task {task_id} on {target_date} removed successfully.")
+        conn.commit()
 
-        one_log = cursor.fetchone()
-        if not one_log:
-            print(f"No completion log found for Task ID {task_id} on {target_date}.")
-            return
-
-        print("\nThis is the completion log you selected:")
-        print(f"Log ID: {one_log[0]} | Task ID: {one_log[1]} | Timestamp: {one_log[2]}")
-
-        yn = input("Are you sure you want to delete this completion record? y/N ")
-
-        if yn.lower() == "y":
-            # 4. Use DELETE to wipe out that exact specific log row
-            cursor.execute(
-                "DELETE FROM task_completions WHERE id = ?",
-                (one_log[0],) # Targets the unique ID of the log row itself
-            )
-            print(f"Completion record for task {task_id} on {target_date} removed successfully.")
-            conn.commit()
-
-        else:
-            print("Operation cancelled")
+    else:
+        print("Operation cancelled")
 
 def show_list(cursor, conn, target_date=None):
     
     list_choice = input("What list would you like to view? (day(d), week(w), month(m), year(y), or custom(c)): ")
+    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     if list_choice.lower() == "d":
         print("--- Todays list ---")
@@ -410,9 +432,29 @@ def show_list(cursor, conn, target_date=None):
         print("--- Custom lists ---")
         print("Todays date and time", current_time)
 
+        # 1. Query the DB for unique categories that aren't empty/NULL
+        cursor.execute("SELECT DISTINCT custom_list FROM tasks WHERE custom_list IS NOT NULL AND custom_list != ''")
+        results = cursor.fetchall()
 
-def custom_list(cursor, conn):
-    pass
+        if results == None:
+            print("There are currently no custom lists")
+            return
+
+        print("Which custom list would you like to view")
+
+        for id, lists in results:
+            print(f"{id + 1}: {lists}")
+
+        c_list = int(input("[Enter corrisponding number] "))
+
+        cursor.execute("""
+            SELECT id, name, category, 
+            FROM tasks 
+            WHERE (custom_list = ?))
+        """, (results[c_list]))
+
+        
+
 
 
 #AI generated code
@@ -514,7 +556,8 @@ def main():
             target_date TEXT,
             recurrence_type TEXT,
             interval_days INTEGER,
-            end_date TEXT
+            end_date TEXT,
+            custom_list
         )"""
     )
     
