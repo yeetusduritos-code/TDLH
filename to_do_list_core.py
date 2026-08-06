@@ -1,18 +1,19 @@
 # imports programs for use
 import sqlite3
+import os
 from datetime import datetime, timedelta
 
 def add_task(cursor, conn):
 
     print("\n--- Display Layout Position ---")
-    print("1. Weekday List\n2. Monthly List\n3. Yearly List\n4. Custom")
-    frame_choice = input("Choose (1-4): ")
+    print("1. Weekday List\n2. Weekly List\n3. Monthly List\n4. Yearly List\n5. Custom")
+    frame_choice = input("Choose (1-5): ")
     time_frame = ['day', 'week', 'month', 'year', 'custom'][int(frame_choice) - 1]
 
     if time_frame != "custom":
         target_date = input("Target date for this item (YYYY-MM-DD): ")
     else:
-        add_custom_task
+        add_custom_task(cursor, conn)
         return
     
     task = input("What is your task/habit ")
@@ -33,7 +34,7 @@ def add_task(cursor, conn):
     custom_list = None
     
     cursor.execute(
-    "INSERT INTO tasks (name, category, time_frame, target_date, recurrence_type, interval_days, end_date) VALUES (?,?,?,?,?,?,?)",
+    "INSERT INTO tasks (name, category, time_frame, target_date, recurrence_type, interval_days, end_date, custom_list) VALUES (?,?,?,?,?,?,?,?)",
     (task, category, time_frame, target_date, recurrence_type, interval_days, end_date, custom_list)
     )
     conn.commit()
@@ -45,7 +46,7 @@ def add_custom_task(cursor, conn):
     time_frame = "custom"
     category = get_or_create_category(cursor)
     target_date = None
-    recurrence_type = None
+    recurrence_type = "once"
     interval_days = 0
     end_date = None
 
@@ -53,7 +54,7 @@ def add_custom_task(cursor, conn):
     custom_list = input("What custom list is this task/habit part off ")
 
     cursor.execute(
-    "INSERT INTO tasks (name, category, time_frame, target_date, recurrence_type, interval_days, end_date) VALUES (?,?,?,?,?,?,?)",
+    "INSERT INTO tasks (name, category, time_frame, target_date, recurrence_type, interval_days, end_date, custom_list) VALUES (?,?,?,?,?,?,?,?)",
     (task, category, time_frame, target_date, recurrence_type, interval_days, end_date, custom_list)
     )
     conn.commit()
@@ -137,11 +138,11 @@ def edit_task(cursor, conn):
     yn = input("Are you sure you want to edit this task y/N ")
 
     if yn.lower() == "y":
-        print("\n1. name\n2. category\n3. time_frame & target_date\n4. target_date\n5. recurrence settings\n6. interval_days\n7. end_date")
+        print("\n1. name\n2. category\n3. time_frame & target_date\n4. target_date\n5. recurrence settings\n6. interval_days\n7. end_date\n8. custom_list")
         
-        edit_select = int(input("What do you want to edit on this task choose (1-7): "))
+        edit_select = int(input("What do you want to edit on this task choose (1-8): "))
         
-        edit_choice = ["name", "category", "time_frame", "target_date", "recurrence_type", "interval_days", "end_date"][edit_select - 1]
+        edit_choice = ["name", "category", "time_frame", "target_date", "recurrence_type", "interval_days", "end_date", "custom_list"][edit_select - 1]
 
         # This variable will hold our value for the single-column updates at the bottom
         edit_value = None
@@ -195,9 +196,12 @@ def edit_task(cursor, conn):
 
         elif edit_select == 7:
             edit_value = input("End date for recurrence (YYYY-MM-DD) [Press Enter for never]: ") or None
+
+        elif edit_select == 8:
+            edit_value = input("What cutom list should your task be part of? [Press Enter for none]") or None
         
         # 4. MASTER ENGINE LOGIC (Runs for options 1, 2, 4, 6, and 7)
-        if edit_select in [1, 2, 4, 6, 7,]: # safely allows None strings for skip options
+        if edit_select in [1, 2, 4, 6, 7, 8]: # safely allows None strings for skip options
             cursor.execute(
                 f"UPDATE tasks SET {edit_choice} = ? WHERE id = ?",
                 (edit_value, int(task))
@@ -286,15 +290,19 @@ def mark_incomplete_task(cursor, conn):
 def show_list(cursor, conn, target_date=None):
     
     list_choice = input("What list would you like to view? (day(d), week(w), month(m), year(y), or custom(c)): ")
+
+    if list_choice.lower() != "c":
+        target_date = input("What date would you like to view? (YYYY-MM-DD)[Enter for today] ") or None
+
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     if list_choice.lower() == "d":
-        print("--- Todays list ---")
+        print("--- Daily list ---")
         print("Todays date and time", current_time)
 
         # 1. Handle the default: Use today's date if the user didn't type one in
         if target_date is None:
-            target_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S") # e.g., "2026-06-26"
+            target_date = datetime.now().strftime("%Y-%m-%d") # e.g., "2026-06-26"
 
         print(f"\n--- Fetching tasks for date: {target_date} ---")
 
@@ -384,14 +392,14 @@ def show_list(cursor, conn, target_date=None):
             SELECT id, name, category, recurrence_type 
             FROM tasks 
             WHERE (target_date LIKE ? AND time_frame = 'month' AND recurrence_type = 'once')
-            OR (target_date <= ? AND end_date >= ? AND time_frame = 'month' AND recurrence_type = 'monthly')
-        """, (current_month_str, current_month_str, current_month_str))
+            OR (target_date <= ? AND (end_date IS NULL OR end_date >= ?) AND time_frame = 'month' AND recurrence_type = 'monthly')
+        """, (f"{current_month_str}%", current_month_str, current_month_str))
 
         monthly_tasks = cursor.fetchall()
 
         # 3. Display the raw results
         if not monthly_tasks:
-            print("No tasks found scheduled for this week.")
+            print("No tasks found scheduled for this month.")
         else:
             for task in monthly_tasks:
                 # task is a tuple: (id, name, category, recurrence_type)
@@ -404,9 +412,11 @@ def show_list(cursor, conn, target_date=None):
 
         # 1. Handle the default: Use today's date if the user didn't type one in
         if target_date is None:
-            target_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S") # e.g., "2026-06-26"
+            target_date = datetime.now().strftime("%Y-%m-%d") # e.g., "2026-06-26"
 
         print(f"\n--- Fetching tasks for this year: {target_date} ---")
+
+        current_year_str = target_date[:4] # e.g., "2026"
 
         # 2. THE SQL QUERY
         # This selects tasks where the target_date matches exactly, 
@@ -414,15 +424,15 @@ def show_list(cursor, conn, target_date=None):
         cursor.execute("""
             SELECT id, name, category, recurrence_type 
             FROM tasks 
-            WHERE (target_date = ? AND time_frame = 'year' AND recurrence_type = 'once')
+            WHERE (target_date LIKE ? AND time_frame = 'year' AND recurrence_type = 'once')
             OR (recurrence_type = 'yearly' AND target_date <= ? AND (end_date IS NULL OR end_date >= ?))
-        """, (target_date, target_date, target_date))
+        """, (f"{current_year_str}%", current_year_str, current_year_str))
 
         yearly_tasks = cursor.fetchall()
 
         # 3. Display the raw results
         if not yearly_tasks:
-            print("No tasks found scheduled for this month.")
+            print("No tasks found scheduled for this year.")
         else:
             for task in yearly_tasks:
                 # task is a tuple: (id, name, category, recurrence_type)
@@ -430,7 +440,6 @@ def show_list(cursor, conn, target_date=None):
 
     elif list_choice.lower() == "c":
         print("--- Custom lists ---")
-        print("Todays date and time", current_time)
 
         # 1. Query the DB for unique categories that aren't empty/NULL
         cursor.execute("SELECT DISTINCT custom_list FROM tasks WHERE custom_list IS NOT NULL AND custom_list != ''")
@@ -442,16 +451,33 @@ def show_list(cursor, conn, target_date=None):
 
         print("Which custom list would you like to view")
 
-        for id, lists in results:
-            print(f"{id + 1}: {lists}")
+        for i, v in enumerate(results):
+            print(f"{i + 1}: {v[0]}")
 
-        c_list = int(input("[Enter corrisponding number] "))
+        try:
+            c_list = int(input("(Enter corrisponding number) ")) -1
+            if c_list < 0 or c_list >= len(results):
+                print("please pick a valid number")
+                return
+            selected_list = results[c_list][0]
+
+        except ValueError:
+            print("please pick a valid number")
+            return
 
         cursor.execute("""
-            SELECT id, name, category, 
+            SELECT id, name, category 
             FROM tasks 
-            WHERE (custom_list = ?))
-        """, (results[c_list]))
+            WHERE (custom_list = ?)
+        """, (selected_list,))
+        custom_tasks = cursor.fetchall()
+        print(f"--- {selected_list} ---")
+        for task in custom_tasks:
+            # task is a tuple: (id, name, category, recurrence_type)
+            print(f"ID: {task[0]} | Name: {task[1]}")
+
+    else:
+        print("You did not select type a vaild viewing option")
 
         
 
@@ -536,15 +562,24 @@ def run_function(cursor, conn):
     elif defpick == "uct":
         return mark_incomplete_task(cursor, conn)
 
+    elif defpick == "sl":
+        return show_list(cursor, conn, target_date=None)
+
     else:
         return None
 
 def main():
-
-
+    # Get the directory where THIS script is located
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # Join that directory with the database filename
+    db_path = os.path.join(base_dir, "todos.db")
+    
+    # Connect using that universal path
     # Defining the connection to the database file and setting up the selection cursor that will be the hing bridging the gap between the script and the database
-    conn = sqlite3.connect("todos.db")
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
+
 
     # making the table
     cursor.execute("""
@@ -557,7 +592,7 @@ def main():
             recurrence_type TEXT,
             interval_days INTEGER,
             end_date TEXT,
-            custom_list
+            custom_list TEXT
         )"""
     )
     
