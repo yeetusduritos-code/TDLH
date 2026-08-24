@@ -380,8 +380,9 @@ def show_list(cursor, conn, target_date=None):
             # If a full timestamp was passed, extract just the date part
             target_date = target_date.split()[0]
         
-        # 2. Extract just the Year and Month (The first 7 characters: "YYYY-MM")
-        current_month_str = target_date[:7] # e.g., "2026-07"
+        current_month_str = target_date[:7]
+        current_month_ub = current_month_str + "-31"
+        current_month_lb = current_month_str + "-01"
 
         print(f"\n--- Fetching tasks for this month: {target_date} ---")
 
@@ -393,7 +394,7 @@ def show_list(cursor, conn, target_date=None):
             FROM tasks 
             WHERE (target_date LIKE ? AND time_frame = 'month' AND recurrence_type = 'once')
             OR (target_date <= ? AND (end_date IS NULL OR end_date >= ?) AND time_frame = 'month' AND recurrence_type = 'monthly')
-        """, (f"{current_month_str}%", current_month_str, current_month_str))
+        """, (f"{current_month_str}%", current_month_ub, current_month_lb))
 
         monthly_tasks = cursor.fetchall()
 
@@ -413,10 +414,14 @@ def show_list(cursor, conn, target_date=None):
         # 1. Handle the default: Use today's date if the user didn't type one in
         if target_date is None:
             target_date = datetime.now().strftime("%Y-%m-%d") # e.g., "2026-06-26"
+        else:
+            target_date = target_date.split()[0]
 
         print(f"\n--- Fetching tasks for this year: {target_date} ---")
 
         current_year_str = target_date[:4] # e.g., "2026"
+        current_year_ub = current_year_str + "-12-31"
+        current_year_lb = current_year_str + "-01-01"
 
         # 2. THE SQL QUERY
         # This selects tasks where the target_date matches exactly, 
@@ -425,8 +430,8 @@ def show_list(cursor, conn, target_date=None):
             SELECT id, name, category, recurrence_type 
             FROM tasks 
             WHERE (target_date LIKE ? AND time_frame = 'year' AND recurrence_type = 'once')
-            OR (recurrence_type = 'yearly' AND target_date <= ? AND (end_date IS NULL OR end_date >= ?))
-        """, (f"{current_year_str}%", current_year_str, current_year_str))
+            OR (recurrence_type = 'yearly' AND time_frame = 'year' AND target_date <= ? AND (end_date IS NULL OR end_date >= ?))
+        """, (f"{current_year_str}%", current_year_ub, current_year_lb))
 
         yearly_tasks = cursor.fetchall()
 
