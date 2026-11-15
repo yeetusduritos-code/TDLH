@@ -48,6 +48,7 @@ def main(page: ft.Page):
     saved_settings = get_all_settings()
     theme_state = {
         "bg": saved_settings.get("theme_bg", "#092328"),
+        "surface": saved_settings.get("theme_surface", "#0D2E34"),
         "surface_card": saved_settings.get("theme_surface_card", saved_settings.get("theme_card", "#12544F")),
         "box": saved_settings.get("theme_box", "#0F3840"),
         "accent": saved_settings.get("theme_accent", "#8BBB92"),
