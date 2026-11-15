@@ -1,0 +1,120 @@
+ Ok I think we should start by defining all the features in a feature list and then I will flesh it out.
+
+here is the feature list:
+
+
+Core Architecture & Tech Stack
+
+
+    Framework: Python + Flet framework (ft.run) with a decoupled SQLite backend (backend.py).
+
+
+    Distribution Model: Anki-style desktop open/free model (no paywall on PC), with potential mobile/pro features monetized later. Focus on making a VERY good onboarding screen and setting up the best possible keywords
+
+
+UI & Theming
+
+
+    Dark Mode Default: Deep dark-gray surface background (#121212) with easy-to-read text.
+
+
+    Accent Color Engine: Default mellow green accent with future settings support to let users switch or customize their own color schemes.
+
+
+    3-Tab Navigation:
+
+
+        Today & Schedule (active tasks view) the view has to show todays tasks by default and an easy way to switch between veiws on the right hand side where you can use your finger to scroll between the diffrent veiws. the week veiw will still be spilt into days of the week horizontally, I have not decided on th emonth veiw. either way it should be a little more like a calendar so it is clear what tasks are schedueld for which days
+
+
+        Add Task (creation form defaulting recurrence to "once") and also another tab for a backlog of tasks. I want it to be so you can have a long list of tasks that you want to get done but dont know when, and then whenever you feel like it you can move it to today or one of the opcoming days
+
+
+        Habits & Data (Anki/GitHub-style horizontal contribution heatmap starting dark/saturated and scaling up to bright neon green). the backend functions are already in place. for habits like lifting wieghts you have to be able to set a value and a unit (again back n already allows for this)
+
+
+Interaction & UX (Frictionless Speed)
+
+
+on pc
+
+    Keyboard-Driven Navigation: Global shortcuts (1, 2, 3 to switch tabs instantly), with arrow key and Enter support for list navigation. everything has to be easy and simple to navigate from the keyboard but also with a mouse.
+
+
+Phone
+
+    Touch & Swipe: Optimized for mobile touch controls when compiled for phones. and support for phones with keyboards
+
+
+Dopamine Loop (Sensory Feedback)
+
+
+    Visual Stimulation: Instant checkmark filling, flash animations, and UI pulses on action completion. take inspiration from other apps
+
+
+    Audio Cues: Crisp, satisfying sound effects triggered on task completion.
+
+
+    Haptics: Subtle device vibration triggers for mobile builds.
+
+
+Reminders & Calendar Sync
+
+
+    Cross-Platform Notifications: Native desktop notifications (Windows/Linux) via Python helper libraries, syncing with native local notifications on mobile.
+
+Data/goal setting
+
+    easy goal setting so you can set a goal for the units to reach like a weekly average or a goal to reach that shows up on the graph and also you should have the ability to get the average of your units graphed
+
+
+These are most of the featurs that have to be implimented and ofc there is a lot of how I want the app to look exactly that will take some time to get right. Now how much of the code that I have show do you remeber do you need me to send it to you again?
+
+
+Please store this list of features and ALWAYS REFER TO IT. also ALWAYS 4x check what you give me will work be weary of flet recently being updated. PLEASE PLEASE PLEASE only give me working code 
+
+
+
+
+
+
+
+Updated Master Roadmap
+
+    Add Task / Habit Page Rework & Calendar Shortcut
+
+        Streamline the task creation form for better UX.
+
+        Add a quick-add button directly inside the calendar views (Day/Week/Month) pre-scheduled for the active date.
+
+    Task Editing & Safe Deletion (Pages 1, 3, & 5)
+
+        Pages 1 & 3 (Schedule & Backlog): Add an edit/detail view accessible on tasks where users can modify properties and safely delete them (tucked away inside the edit menu so they can't be deleted by accident).
+
+        Accidental Deletion Safeguard: Implement a confirmation pop-up modal ("Are you sure you want to delete this task?") across all deletion triggers.
+
+        Page 5 (All Tasks): Add a dedicated Selection Mode allowing users to select multiple tasks simultaneously and batch-delete them securely.
+
+    Backlog QoL Improvements
+
+        Allow backlog tasks to be marked as finished directly inside the backlog view.
+
+    Goal Achievement Feedback (Dopamine Loop)
+
+        Visual and sensory rewards/notifications when hitting set target goals or hard limits.
+
+    All Tasks Page Rework & Search
+
+        Redesign the All Database Tasks view and add a live search bar for instant filtering.
+
+    Week View Text Cutt-off Fix
+
+        Resolve layout and wrapping constraints in the horizontal week view where text gets clipped.
+
+    Master List Features (Theme Customization, Dopamine Audio/Haptics, Notifications)
+
+        Custom accent color picker.
+
+        Audio cues, flash animations, UI pulses, and mobile haptics.
+
+        Native desktop and mobile notifications.

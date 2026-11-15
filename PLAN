@@ -1,0 +1,70 @@
+# Project Specification & Master Roadmap: Habit & Task Tracker (Python + Flet + SQLite)
+
+## 1. Architecture & Tech Stack Overview
+- **Frontend (`app.py`)**: Single-page reactive Flet desktop/mobile UI organized into modular section markers (`SECTION A1` through `SECTION A9`).
+- **Backend (`backend.py`)**: Local SQLite database (`tasks.db` / `habits`) managing tasks, recurring schedules, completion logs with quantifiable units, and multi-goal tracking (`SECTION B1` through `SECTION B5`).
+- **Navigation**: 5 main views accessible via top navigation bar or keyboard shortcuts (`1`–`5`), plus arrow-key task navigation, `T` to snap to today, and `Enter`/`Space` to toggle completion.
+- **Date Formatting Standard**:
+  - **View 1 Day Header ONLY**: Includes weekday & ISO week (`Tue, 03 Nov 2026 • W45`).
+  - **Everywhere Else (Buttons, Pickers, Cards, Tooltips)**: Clean date without weekday (`03 Nov 2026` or `DD-MM-YYYY` in text inputs).
+
+---
+
+## 2. Completed Features (✅ DONE)
+
+### View 1: Schedule & Today (`SECTION A4`)
+- **Day / Week / Month Views**: Right-rail mode switcher (clickable + mouse-wheel scrollable) and bottom dot navigation for jumping across days, weeks, and months.
+- **Task Completion & Unit Logging**: Checking off a recurring habit with a unit opens a quick-log banner (`unit_popup_banner`) to record numeric amounts (`kg`, `pages`, `mins`, etc.).
+- **Inline Task Expansion Editor (`SUB-SECTION A5b`)**: Clicking the `⋮` button on any task card in Day View or Backlog expands an inline drawer to edit name, category, unit, notes, start/end dates, and recurrence without leaving the view, including a two-step delete confirmation safeguard.
+
+### View 2: Add Task / Habit Form (`SECTION A5`)
+- **Custom Graphical Calendar Popups**: Interactive start-date and end-date mini-calendars with quick duration preset chips (`2 Weeks`, `1 Month`, `3 Months`, `1 Year`).
+- **Visual Recurrence Builder**: Toggle between One-Time Task and Recurring Habit (`Weekly / Daily` with interactive day balls, `Monthly / Yearly` with 12-month grid, and `Every X Days` custom interval).
+
+### View 3: Backlog Queue (`SECTION A6`)
+- **Unscheduled Task Queue**: Lists unscheduled items with 1-click `Today` / `Tmrw` scheduling buttons, direct completion checkbox (logs to today), and inline editing.
+
+### View 4: Habits & Data Dashboard (`SECTION A2` & `SECTION A7`)
+- **Scope Filtering & Custom Date Range Inspector**: Filter by Global, Category, or Individual Habit, with `DD-MM-YYYY` start/end date bounds filtering.
+- **Streak & Consistency Cards**: Calculates Current Streak, Best Streak, Completion Rate %, and Completed vs. Missed scheduled occurrences up to today.
+- **Anki-Style Review Heatmap**: Monday–Sunday aligned grid with month headers, 5-level neon green intensity scale, today highlight border, and subtle dots (`·`) for unscheduled days on non-daily habits.
+- **Anki-Style Auto-Condensing SVG Unit Progression Graph (`build_area_line_chart_image`)**:
+  - Fixed `680px` viewport width that automatically condenses bars/dots and thins X-axis labels as completion history grows.
+  - **Style Toggle**: `Line (Connected Dots)` vs. `Pillars (Bars)`.
+  - **Time Grouping Toggle**: `Daily` (with faint vertical dashed ISO week separator lines) vs. `By Week` (with sub-toggle for `Wk Avg` vs. `Wk Total`).
+  - **Average Line Toggle**: `Running Avg`, `Weekly (Session) Avg` (ignores missed/unlogged days), or `Hide`—rendered in foreground Sky-Blue (`#38BDF8`) with a right-margin badge.
+  - **Multi-Goal Engine & Left-Aligned Benchmarks**: Create Peak/Max, Weekly Average, or Overall Average goals with optional target deadlines. Active goals render in full-width Soft Violet (`#C084FC`) with left-aligned badges (`🎯 Max: 50`) so they never collide with the right-hand average badge.
+  - **Precision & Tooltips**: All graph numbers rounded to max 2 decimals; native SVG `<title>` hover tooltips on points/bars.
+
+### View 5: All Database Tasks (`SECTION A8`)
+- **Database Inspector & Batch Delete**: Displays all tasks in SQLite with a `Select / Delete` batch mode and confirmation banner.
+
+---
+
+## 3. Remaining Features to Implement (🚧 TODO — Ordered Priority)
+
+### Priority 1: View 4 Interactive Graph Hover & Polish (`SECTION A2` & `SECTION A7`)
+- ** Verify/Enhance Hover Readability**: Since Flet renders the SVG inside `ft.Image(src="data:image/svg+xml;base64,...")`, native `<title>` tags inside base64 images may not trigger browser/OS tooltips in all Flet desktop runtimes. If native SVG tooltips don't show on hover, add a lightweight interactive inspection bar or Flet `GestureDetector` / point-inspector under the chart.
+
+### Priority 2: View 2 — Habit Restart & Chained History Linking (`SECTION A5` & `backend.py`)
+- **"Restart / Quick-Select Past Habit" Control**: On the Add Task / Habit page, add a dropdown or quick-select chip bar of previously created habits (fetched from the database). Selecting one auto-fills `Name`, `Category`, `Unit`, and `Recurrence` so the user can restart an old habit with a new start/end window in one click.
+- **Live "Linked Habit History" Badge**: When typing in `name_field` on View 2, check if the name (case-insensitive) matches an existing habit in the database. Display a subtle live info badge: *"🔗 Matches existing habit '[Name]' — completions & unit logs will merge into the same Page 4 history."*
+- **Clean Up Remaining Date Strings in `SECTION A5a`**: Update `date_btn_label` and `end_date_btn_label` (and their picker callbacks in `SECTION A5a`) from `"%a, %b %d, %Y"` to `"%d %b %Y"` (`07 Nov 2026`) to match the app-wide date formatting rule.
+
+### Priority 3: View 5 — Live Search, Category Filter & Date Formatting (`SECTION A8`)
+- **Live Search & Filter Bar**: Add a search `TextField` (filters by task name/note in real time) and a Category/Recurrence filter dropdown at the top of View 5 (`load_all_tasks_view`).
+- **Format Raw ISO Dates**: Convert raw `target_date` (`YYYY-MM-DD`) and `end_date` strings in the View 5 task list cards into clean UI dates (`format_ui_date(target_date, "short_text")` -> `07 Nov 2026`).
+- **Inline Edit Support in View 5**: Allow expanding/editing tasks directly inside View 5 just like View 1 and View 3.
+
+### Priority 4: View 1 — Week View Text Wrapping Fix (`SUB-SECTION A4c`)
+- **Fix Clipped Task Labels in `build_week_tasks_view()`**: Currently, long task names inside the `160px` wide week columns in `ft.Checkbox(label=...)` can clip or overflow horizontally. Replace or wrap the checkbox label using a `ft.Row([ft.Checkbox(...), ft.Text(label_display, expand=True, size=12)])` so multi-word task names wrap cleanly onto multiple lines inside each day column.
+
+### Priority 5: Cross-Platform Reminder Notifications
+- **Notification Engine**: Add optional reminder times to tasks/habits and implement a background check or OS notification trigger (desktop & mobile compatible) for due tasks.
+
+### Priority 6: Final UI/UX Polish, Custom Theme Engine & Dopamine Loop
+- **Custom Theme / Accent Switcher**: Allow switching the primary accent color (default Neon Green) and surface contrast in a settings drawer/modal, persisted in SQLite.
+- **Dopamine Loop & Micro-Interactions**:
+  - Subtle audio cues on task check-off, unit log submission, and goal achievement.
+  - Visual flash/pulse animation on task card completion and a celebratory banner/effect when a habit unit log crosses an active Goal threshold (`achieved = 1`).
+  - Responsive layout check for both Desktop resizable windows and Mobile aspect ratios.
